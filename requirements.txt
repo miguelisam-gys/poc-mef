@@ -1,0 +1,7 @@
+semantic-kernel
+pydantic
+chainlit
+python-dotenv
+aiosqlite
+aiohttp
+pandas
