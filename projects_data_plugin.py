@@ -165,24 +165,24 @@ CAMPOS OBLIGATORIOS A MOSTRAR EN RESPUESTAS (cuando estén disponibles):
 
     async def get_database_info(self: "ProjectsDataPlugin") -> str:
         """Return a string containing the database schema information and common query fields."""
-        table_dicts = []
-        for table_name in await self._get_table_names():
-            columns_names = await self._get_column_info(table_name)
-            table_dicts.append(
-                {"table_name": table_name, "column_names": columns_names}
-            )
+        # table_dicts = []
+        # for table_name in await self._get_table_names():
+        #     columns_names = await self._get_column_info(table_name)
+        #     table_dicts.append(
+        #         {"table_name": table_name, "column_names": columns_names}
+        #     )
 
-        database_info = "\n".join(
-            [
-                f"Table {table['table_name']} Schema: Columns: {', '.join(table['column_names'])}"
-                for table in table_dicts
-            ]
-        )
+        # database_info = "\n".join(
+        #     [
+        #         f"Table {table['table_name']} Schema: Columns: {', '.join(table['column_names'])}"
+        #         for table in table_dicts
+        #     ]
+        # )
 
         # Agregar contexto sobre las columnas y campos para filtrar
-        database_info += "\n\n" + self._get_mandatory_response_fields()
+        database_info = "\n\n" + self._get_mandatory_response_fields()
         database_info += "\n\n" + self._get_filter_fields_info()
-        database_info += "\n\nDESCRIPCIÓN DE COLUMNAS:\n"
+        database_info += "\n\nDESCRIPCIÓN DE COLUMNAS de la tabla total_inversiones:\n"
 
         column_descriptions = self._get_column_descriptions()
         for column, description in column_descriptions.items():
@@ -202,14 +202,15 @@ CAMPOS OBLIGATORIOS A MOSTRAR EN RESPUESTAS (cuando estén disponibles):
         :return: Return data in JSON serializable format.
         :rtype: str
         """
+        sqlite_query_upper = sqlite_query.upper()
 
         print(
             f"\n{tc.BLUE}Function Call Tools: async_fetch_sales_data_using_sqlite_query{tc.RESET}\n"
         )
-        print(f"{tc.BLUE}Executing query: {sqlite_query}{tc.RESET}\n")
+        print(f"{tc.BLUE}Executing query: {sqlite_query_upper}{tc.RESET}\n")
 
         try:
-            async with self.conn.execute(sqlite_query) as cursor:
+            async with self.conn.execute(sqlite_query_upper) as cursor:
                 rows = await cursor.fetchall()
                 columns = [description[0] for description in cursor.description]
 
@@ -222,5 +223,5 @@ CAMPOS OBLIGATORIOS A MOSTRAR EN RESPUESTAS (cuando estén disponibles):
 
         except Exception as e:
             return json.dumps(
-                {"SQLite query failed with error": str(e), "query": sqlite_query}
+                {"SQLite query failed with error": str(e), "query": sqlite_query_upper}
             )
