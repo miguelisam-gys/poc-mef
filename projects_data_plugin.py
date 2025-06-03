@@ -1,31 +1,56 @@
 import json
 import logging
+import os
 from typing import Optional
 
-import aiosqlite
+import asyncpg
 import pandas as pd
 from semantic_kernel.functions import kernel_function
 from terminal_colors import TerminalColors as tc
 
-# DATA_BASE = "database/contoso-sales.db"
-DATA_BASE = "database/total_inversiones.db"
-
+# Configuración de logs
 logging.basicConfig(level=logging.ERROR)
 logger = logging.getLogger(__name__)
 
+# Validación de variables de entorno
+required_env_vars = [
+    "DB_HOST",
+    "DB_PORT",
+    "DB_NAME",
+    "DB_USER",
+    "DB_PASSWORD",
+    "DB_TABLE_NAME",
+]
+missing_vars = [var for var in required_env_vars if var not in os.environ]
+
+if missing_vars:
+    raise EnvironmentError(
+        f"Las siguientes variables de entorno son requeridas pero no están configuradas: {', '.join(missing_vars)}"
+    )
+
+# Configuración de DB
+DATABASE_CONFIG = {
+    "host": os.getenv("DB_HOST"),
+    "port": os.getenv("DB_PORT"),
+    "database": os.getenv("DB_NAME"),
+    "user": os.getenv("DB_USER"),
+    "password": os.getenv("DB_PASSWORD"),
+}
+
+DB_TABLE_NAME = os.getenv("DB_TABLE_NAME")
+
 
 class ProjectsDataPlugin:
-    conn: Optional[aiosqlite.Connection]
+    conn: Optional[asyncpg.Connection]
 
     def __init__(self) -> None:
         self.conn = None
 
     async def connect(self) -> None:
-        db_uri = f"file:{DATA_BASE}?mode=ro"
         try:
-            self.conn = await aiosqlite.connect(db_uri, uri=True)
+            self.conn = await asyncpg.connect(**DATABASE_CONFIG)
             logger.info("Database connection opened.")
-        except aiosqlite.Error as e:
+        except asyncpg.PostgresError as e:
             logger.exception("An error occurred", exc_info=e)
             self.conn = None
 
@@ -36,50 +61,48 @@ class ProjectsDataPlugin:
 
     async def _get_table_names(self: "ProjectsDataPlugin") -> list:
         """Return a list of table names."""
-        table_names = []
-        async with self.conn.execute(
-            "SELECT name FROM sqlite_master WHERE type='table';"
-        ) as tables:
-            return [table[0] async for table in tables if table[0] != "sqlite_sequence"]
+        query = """
+        SELECT table_name 
+        FROM information_schema.tables 
+        WHERE table_schema = 'public' AND table_type = 'BASE TABLE';
+        """
+        rows = await self.conn.fetch(query)
+        return [row["table_name"] for row in rows]
 
     async def _get_column_info(self: "ProjectsDataPlugin", table_name: str) -> list:
         """Return a list of tuples containing column names and their types."""
-        column_info = []
-        async with self.conn.execute(f"PRAGMA table_info('{table_name}');") as columns:
-            # col[1] is the column name, col[2] is the column type
-            return [f"{col[1]}: {col[2]}" async for col in columns]
+        query = """
+        SELECT column_name, data_type 
+        FROM information_schema.columns 
+        WHERE table_name = $1 AND table_schema = 'public'
+        ORDER BY ordinal_position;
+        """
+        rows = await self.conn.fetch(query, table_name)
+        return [f"{row['column_name']}: {row['data_type']}" for row in rows]
 
     async def _get_regions(self: "ProjectsDataPlugin") -> list:
         """Return a list of unique regions in the database."""
-        async with self.conn.execute(
-            "SELECT DISTINCT region FROM sales_data;"
-        ) as regions:
-            result = await regions.fetchall()
-        return [region[0] for region in result]
+        query = "SELECT DISTINCT region FROM sales_data;"
+        rows = await self.conn.fetch(query)
+        return [row["region"] for row in rows]
 
     async def _get_product_types(self: "ProjectsDataPlugin") -> list:
         """Return a list of unique product types in the database."""
-        async with self.conn.execute(
-            "SELECT DISTINCT product_type FROM sales_data;"
-        ) as product_types:
-            result = await product_types.fetchall()
-        return [product_type[0] for product_type in result]
+        query = "SELECT DISTINCT product_type FROM sales_data;"
+        rows = await self.conn.fetch(query)
+        return [row["product_type"] for row in rows]
 
     async def _get_product_categories(self: "ProjectsDataPlugin") -> list:
         """Return a list of unique product categories in the database."""
-        async with self.conn.execute(
-            "SELECT DISTINCT main_category FROM sales_data;"
-        ) as product_categories:
-            result = await product_categories.fetchall()
-        return [product_category[0] for product_category in result]
+        query = "SELECT DISTINCT main_category FROM sales_data;"
+        rows = await self.conn.fetch(query)
+        return [row["main_category"] for row in rows]
 
     async def _get_reporting_years(self: "ProjectsDataPlugin") -> list:
         """Return a list of unique reporting years in the database."""
-        async with self.conn.execute(
-            "SELECT DISTINCT year FROM sales_data ORDER BY year;"
-        ) as reporting_years:
-            result = await reporting_years.fetchall()
-        return [str(reporting_year[0]) for reporting_year in result]
+        query = "SELECT DISTINCT year FROM sales_data ORDER BY year;"
+        rows = await self.conn.fetch(query)
+        return [str(row["year"]) for row in rows]
 
     def _get_column_descriptions(self) -> dict:
         """Retorna un diccionario con las descripciones de las columnas de la base de datos de inversiones."""
@@ -165,24 +188,10 @@ CAMPOS OBLIGATORIOS A MOSTRAR EN RESPUESTAS (cuando estén disponibles):
 
     async def get_database_info(self: "ProjectsDataPlugin") -> str:
         """Return a string containing the database schema information and common query fields."""
-        # table_dicts = []
-        # for table_name in await self._get_table_names():
-        #     columns_names = await self._get_column_info(table_name)
-        #     table_dicts.append(
-        #         {"table_name": table_name, "column_names": columns_names}
-        #     )
-
-        # database_info = "\n".join(
-        #     [
-        #         f"Table {table['table_name']} Schema: Columns: {', '.join(table['column_names'])}"
-        #         for table in table_dicts
-        #     ]
-        # )
-
         # Agregar contexto sobre las columnas y campos para filtrar
         database_info = "\n\n" + self._get_mandatory_response_fields()
         database_info += "\n\n" + self._get_filter_fields_info()
-        database_info += "\n\nDESCRIPCIÓN DE COLUMNAS de la tabla total_inversiones:\n"
+        database_info += f"\n\nDESCRIPCIÓN DE COLUMNAS de la tabla {DB_TABLE_NAME}:\n"
 
         column_descriptions = self._get_column_descriptions()
         for column, description in column_descriptions.items():
@@ -192,36 +201,61 @@ CAMPOS OBLIGATORIOS A MOSTRAR EN RESPUESTAS (cuando estén disponibles):
 
     @kernel_function(
         name="fetch_sales_data",
-        description="Execute an SQLite query and return results as JSON",
+        description="Execute a PostgreSQL query and return results as JSON",
     )
     async def async_fetch_sales_data_using_sqlite_query(self, sqlite_query: str) -> str:
         """
-        This function is used to answer user questions about Contoso sales data by executing SQLite queries against the database.
+        This function is used to answer user questions about investment data by executing PostgreSQL queries against the database.
 
-        :param sqlite_query: The input should be a well-formed SQLite query to extract information based on the user's question. The query result will be returned as a JSON object.
+        :param sqlite_query: The input should be a well-formed PostgreSQL query to extract information based on the user's question. The query result will be returned as a JSON object.
         :return: Return data in JSON serializable format.
         :rtype: str
         """
-        sqlite_query_upper = sqlite_query.upper()
+        # Convertir query a PostgreSQL si es necesario
+        postgres_query = self._convert_sqlite_to_postgres(sqlite_query)
 
         print(
             f"\n{tc.BLUE}Function Call Tools: async_fetch_sales_data_using_sqlite_query{tc.RESET}\n"
         )
-        print(f"{tc.BLUE}Executing query: {sqlite_query_upper}{tc.RESET}\n")
+        print(f"{tc.BLUE}Executing query: {postgres_query}{tc.RESET}\n")
 
         try:
-            async with self.conn.execute(sqlite_query_upper) as cursor:
-                rows = await cursor.fetchall()
-                columns = [description[0] for description in cursor.description]
+            rows = await self.conn.fetch(postgres_query)
 
             if not rows:
                 return json.dumps(
                     "The query returned no results. Try a different question."
                 )
-            data = pd.DataFrame(rows, columns=columns)
+
+            # Convertir asyncpg.Record a diccionarios para pandas
+            data_dicts = [dict(row) for row in rows]
+            data = pd.DataFrame(data_dicts)
             return data.to_json(index=False, orient="split")
 
         except Exception as e:
             return json.dumps(
-                {"SQLite query failed with error": str(e), "query": sqlite_query_upper}
+                {"PostgreSQL query failed with error": str(e), "query": postgres_query}
             )
+
+    def _convert_sqlite_to_postgres(self, sqlite_query: str) -> str:
+        """
+        Convierte queries de SQLite a PostgreSQL cuando sea necesario.
+        Esta función puede expandirse para manejar más conversiones específicas.
+        """
+        postgres_query = sqlite_query
+
+        # Conversiones básicas de SQLite a PostgreSQL
+        conversions = {
+            # SQLite usa || para concatenación, PostgreSQL también lo soporta
+            # SQLite usa LIMIT, PostgreSQL también lo soporta
+            # Conversiones de tipos de datos si es necesario
+            "INTEGER": "INTEGER",
+            "TEXT": "TEXT",
+            "REAL": "REAL",
+        }
+
+        # Aplicar conversiones si es necesario
+        for sqlite_syntax, postgres_syntax in conversions.items():
+            postgres_query = postgres_query.replace(sqlite_syntax, postgres_syntax)
+
+        return postgres_query

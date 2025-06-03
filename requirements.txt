@@ -3,5 +3,6 @@ pydantic
 chainlit
 python-dotenv
 aiosqlite
+asyncpg
 aiohttp
 pandas
