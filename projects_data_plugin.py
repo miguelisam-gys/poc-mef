@@ -36,8 +36,10 @@ DATABASE_CONFIG = {
     "user": os.getenv("DB_USER"),
     "password": os.getenv("DB_PASSWORD"),
 }
+# print(f"{DATABASE_CONFIG=}")
 
 DB_TABLE_NAME = os.getenv("DB_TABLE_NAME")
+# print(f"{DB_TABLE_NAME=}")
 
 
 class ProjectsDataPlugin:
@@ -212,7 +214,7 @@ CAMPOS OBLIGATORIOS A MOSTRAR EN RESPUESTAS (cuando estén disponibles):
         :rtype: str
         """
         # Convertir query a PostgreSQL si es necesario
-        postgres_query = self._convert_sqlite_to_postgres(sqlite_query)
+        postgres_query = self._convert_sqlite_to_postgres(sqlite_query).upper()
 
         print(
             f"\n{tc.BLUE}Function Call Tools: async_fetch_sales_data_using_sqlite_query{tc.RESET}\n"
