@@ -238,7 +238,7 @@ CAMPOS OBLIGATORIOS A MOSTRAR EN RESPUESTAS (cuando estén disponibles):
         name="fetch_sales_data",
         description="Execute a PostgreSQL query and return results as JSON",
     )
-    async def async_fetch_sql_data_using_sqlite_query(self, sqlite_query: str) -> str:
+    async def async_fetch_sql_data_using_postgres_query(self, sqlite_query: str) -> str:
         """
         This function is used to answer user questions about investment data by executing PostgreSQL queries against the database.
 
@@ -253,7 +253,7 @@ CAMPOS OBLIGATORIOS A MOSTRAR EN RESPUESTAS (cuando estén disponibles):
         postgres_query = self._selective_uppercase(postgres_query)
 
         print(
-            f"\n{tc.BLUE}Function Call Tools: async_fetch_sql_data_using_sqlite_query{tc.RESET}\n"
+            f"\n{tc.BLUE}Function Call Tools: async_fetch_sql_data_using_postgres_query{tc.RESET}\n"
         )
         print(f"{tc.BLUE}Executing query: {postgres_query}{tc.RESET}\n")
 
