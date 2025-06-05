@@ -131,9 +131,9 @@ class ProjectsDataPlugin:
             "COSTO_INVERSION_VIABLE": "Costo de la Inversión con la que fue declarado viable",
             "DEPARTAMENTO_INVERSION": "Departamento donde se ubica la Inversión",
             "TIPOLOGIA_DE_INVERSION": "Tipología registrada  de la Inversión",
-            "EXPEDIENTE TECNICO": "Indicador de registro de Expediente Técnico: SI / NO",
+            "EXPEDIENTE_TECNICO": "Indicador de registro de Expediente Técnico: SI / NO",
             "TIENE_FORMATO_08": "Indicador de si la Inversión tiene registro en el Formato 08 (Ejecución): SI / NO",
-            "ETAPA_FORMATO_08_ACTUAL": "Etapa actual en la cual se encuentra la Inversión: CONSISTENCIA / EXPEDIENTE TÉCNICO / EJECUCIÓN FÍSICA",
+            "ETAPA_FORMATO_08_ACTUAL": "Etapa actual en la cual se encuentra la Inversión: 'APROBACIÓN DE CONSISTENCIA (A)', 'EXPEDIENTE TÉCNICO (B)', 'EJECUCIÓN FÍSICA (C)'",
             "FECHA_INICIO_INVERSION": "Fecha de Inicio de la ejecución de la inversión registrado en el Formato 08",
             "FECHA_FIN_INVERSION": "Fecha de Fin de la ejecución de la Inversión registrado en el Format 08",
             "COSTO_INVERSION_ACTUALIZADO": "Costo de la Inversión actualizado",
@@ -157,6 +157,37 @@ class ProjectsDataPlugin:
             "SECTOR": "Sector de gobierno de la Unidad Formuladora",
             "PLIEGO": "Pliego 7Entidad de ula Unidad Formuladora",
         }
+
+    def _get_detailed_fields_query_info(self) -> str:
+        """Retorna información sobre los campos detallados para consultas específicas."""
+        filter_info = """
+CAMPOS DETALLADOS PARA CONSULTAS ESPECÍFICAS DE INVERSIÓN:
+Cuando el usuario solicite información detallada sobre una inversión específica usando su código único, mostrar en una tabla:
+- CODIGO_UNICO
+- NOMBRE_INVERSION
+- ESTADO
+- SITUACION
+- TIPO_FORMATO
+- SECTOR
+- PLIEGO
+- NOMBRE_EJECUTORA_PRESUPUESTAL
+- FUNCION
+- FECHA_VIABILIDAD
+- COSTO_INVERSION_VIABLE
+- EXPEDIENTE TECNICO
+- COSTO_TOTAL_INV_ACTUALIZADO
+- DEVENGADO_ACUMULADO
+- AVANCE_FINANCIERO
+- PIM_AÑO_ACTUAL
+- DEVENGADO_AÑO_ACTUAL
+- AVANCE_FISICO_INVERSION
+- FECHA_REGISTRO_SITUACION
+- DESCRIPCION_ULTIMA_SITUACION
+- ENLACE_SSI
+
+No es necesario motrar CODIGO_SNIP si no se solicitan.
+        """
+        return filter_info.strip()
 
     def _get_filter_fields_info(self) -> str:
         """Retorna información sobre los campos disponibles para filtrar."""
@@ -194,6 +225,7 @@ CAMPOS OBLIGATORIOS A MOSTRAR EN RESPUESTAS (cuando estén disponibles):
         # Agregar contexto sobre las columnas y campos para filtrar
         database_info = "\n\n" + self._get_mandatory_response_fields()
         database_info += "\n\n" + self._get_filter_fields_info()
+        database_info += "\n\n" + self._get_detailed_fields_query_info()
         database_info += f"\n\nDESCRIPCIÓN DE COLUMNAS de la tabla {DB_TABLE_NAME}:\n"
 
         column_descriptions = self._get_column_descriptions()
@@ -215,7 +247,10 @@ CAMPOS OBLIGATORIOS A MOSTRAR EN RESPUESTAS (cuando estén disponibles):
         :rtype: str
         """
         # Convertir query a PostgreSQL si es necesario
-        postgres_query = self._convert_sqlite_to_postgres(sqlite_query).upper()
+        postgres_query = self._convert_sqlite_to_postgres(sqlite_query)
+
+        # Convertir a mayúsculas pero preservar columnas con ñ
+        postgres_query = self._selective_uppercase(postgres_query)
 
         print(
             f"\n{tc.BLUE}Function Call Tools: async_fetch_sql_data_using_sqlite_query{tc.RESET}\n"
@@ -240,6 +275,32 @@ CAMPOS OBLIGATORIOS A MOSTRAR EN RESPUESTAS (cuando estén disponibles):
                 {"PostgreSQL query failed with error": str(e), "query": postgres_query}
             )
 
+    def _selective_uppercase(self, query: str) -> str:
+        """
+        Convierte la query a mayúsculas pero preserva los nombres de columnas con ñ
+        que deben mantenerse en minúsculas.
+        """
+        # Columnas que deben mantenerse en minúsculas (contienen ñ)
+        preserve_columns = ["pim_año_actual", "devengado_año_actual"]
+
+        # Crear marcadores temporales para preservar estas columnas
+        temp_markers = {}
+        temp_query = query
+
+        for i, column in enumerate(preserve_columns):
+            marker = f"__PRESERVE_COLUMN_{i}__"
+            temp_markers[marker] = column
+            temp_query = temp_query.replace(column, marker)
+
+        # Convertir a mayúsculas
+        temp_query = temp_query.upper()
+
+        # Restaurar las columnas preservadas
+        for marker, original_column in temp_markers.items():
+            temp_query = temp_query.replace(marker, original_column)
+
+        return temp_query
+
     def _convert_sqlite_to_postgres(self, sqlite_query: str) -> str:
         """
         Convierte queries de SQLite a PostgreSQL cuando sea necesario.
@@ -257,7 +318,17 @@ CAMPOS OBLIGATORIOS A MOSTRAR EN RESPUESTAS (cuando estén disponibles):
             "REAL": "REAL",
         }
 
-        # Aplicar conversiones si es necesario
+        # Normalizar nombres de columnas comunes que pueden venir en diferentes formatos
+        column_normalizations = {
+            "PIM_AÑO_ACTUAL": "pim_año_actual",
+            "DEVENGADO_AÑO_ACTUAL": "devengado_año_actual",
+        }
+
+        # Aplicar normalizaciones de columnas
+        for variant, normalized in column_normalizations.items():
+            postgres_query = postgres_query.replace(variant, normalized)
+
+        # Aplicar conversiones básicas
         for sqlite_syntax, postgres_syntax in conversions.items():
             postgres_query = postgres_query.replace(sqlite_syntax, postgres_syntax)
 
