@@ -17,7 +17,7 @@ ENV/
 # Archivos y carpetas generadas por Chainlit
 chainlit.db
 chainlit.log
-.chainlit/
+#.chainlit/
 
 # Logs y bases de datos temporales
 *.log

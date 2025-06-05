@@ -25,17 +25,16 @@ async def on_chat_start():
 
     # Add your AI service (e.g., OpenAI)
     # Make sure OPENAI_API_KEY and OPENAI_ORG_ID are set in your environment
-    service=AzureChatCompletion(
-    endpoint=os.getenv("AZURE_OPENAI_ENDPOINT"),
-    deployment_name=os.getenv("AZURE_OPENAI_DEPLOYMENT_NAME"),
-    
-    api_key=os.getenv("AZURE_OPENAI_API_KEY")
-)
+    service = AzureChatCompletion(
+        endpoint=os.getenv("AZURE_OPENAI_ENDPOINT"),
+        deployment_name=os.getenv("AZURE_OPENAI_DEPLOYMENT_NAME"),
+        api_key=os.getenv("AZURE_OPENAI_API_KEY"),
+    )
     kernel.add_service(service)
 
     # Import the WeatherPlugin
     kernel.add_plugin(projects_data_plugin, plugin_name="ProjectsData")
-    
+
     # Instantiate and add the Chainlit filter to the kernel
     # This will automatically capture function calls as Steps
     sk_filter = cl.SemanticKernelFilter(kernel=kernel)
@@ -44,7 +43,8 @@ async def on_chat_start():
 
     # Replace the placeholder with the database schema string
     instructions = instructions.replace(
-        "{database_schema_string}", database_schema_string)
+        "{database_schema_string}", database_schema_string
+    )
 
     agent = ChatCompletionAgent(
         kernel=kernel,
@@ -55,6 +55,7 @@ async def on_chat_start():
     thread: ChatHistoryAgentThread = None
     cl.user_session.set("agent", agent)
     cl.user_session.set("thread", thread)
+
 
 @cl.on_message
 async def on_message(message: cl.Message):

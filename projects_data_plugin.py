@@ -113,7 +113,7 @@ class ProjectsDataPlugin:
             "CODIGO_SNIP": "Código SNIP de la Inversión",
             "NOMBRE_INVERSION": "Nombre de la Inversión",
             "ESTADO": "Estado de la Inversión: ACTIVO / CERRADO / DESACTIVADO",
-            "SITUACION": "Situación de la Inversión:  VIABLE /APROBADO / NO VIABLE / NO APROBADO / EN FORMULACIÓN / EN REGISTRO",
+            "SITUACION": "Situación de la Inversión:  VIABLE /APROBADO / NO VIABLE / NO APROBADO / EN FORMULACION / EN REGISTRO",
             "MARCO": "Sistema de Inversión Pública: SNIP / INVIERTE",
             "TIPO_FORMATO": "Descripción del formato de inversión: PROYECTO DE INVERSIÓN / IOARR / PROGRAMA DE INVERSIÓN / PROYECTOS ESPECIALES",
             "UNIDAD_FORMULADORA_UF": "UF: Unidad Formuladora de la Inversión",
@@ -174,6 +174,7 @@ CAMPOS PARA FILTRAR INFORMACIÓN:
 - FUNCION: Nombre de la Función
 - DEPARTAMENTO_INVERSION: Departamento donde se ubica la Inversión
 - TIPOLOGIA_DE_INVERSION: Tipología registrada  de la Inversión
+Las regiones se deben convertir a mayúsculas sin tildes, por ejemplo convertir Huánuco a HUANUCO. Además 'Lima Metropolitana' se debe convertir a 'LIMA'.
         """
         return filter_info.strip()
 
@@ -185,7 +186,7 @@ CAMPOS OBLIGATORIOS A MOSTRAR EN RESPUESTAS (cuando estén disponibles):
 - CODIGO_SNIP: Código SNIP de la Inversión
 - NOMBRE_INVERSION: Nombre de la Inversión
 - ESTADO: Estado de la Inversión: ACTIVO / CERRADO / DESACTIVADO
-- SITUACION: Situación de la Inversión:  VIABLE /APROBADO / NO VIABLE / NO APROBADO / EN FORMULACIÓN / EN REGISTRO
+- SITUACION: Situación de la Inversión:  VIABLE /APROBADO / NO VIABLE / NO APROBADO / EN FORMULACION / EN REGISTRO
         """
 
     async def get_database_info(self: "ProjectsDataPlugin") -> str:
@@ -205,7 +206,7 @@ CAMPOS OBLIGATORIOS A MOSTRAR EN RESPUESTAS (cuando estén disponibles):
         name="fetch_sales_data",
         description="Execute a PostgreSQL query and return results as JSON",
     )
-    async def async_fetch_sales_data_using_sqlite_query(self, sqlite_query: str) -> str:
+    async def async_fetch_sql_data_using_sqlite_query(self, sqlite_query: str) -> str:
         """
         This function is used to answer user questions about investment data by executing PostgreSQL queries against the database.
 
@@ -217,7 +218,7 @@ CAMPOS OBLIGATORIOS A MOSTRAR EN RESPUESTAS (cuando estén disponibles):
         postgres_query = self._convert_sqlite_to_postgres(sqlite_query).upper()
 
         print(
-            f"\n{tc.BLUE}Function Call Tools: async_fetch_sales_data_using_sqlite_query{tc.RESET}\n"
+            f"\n{tc.BLUE}Function Call Tools: async_fetch_sql_data_using_sqlite_query{tc.RESET}\n"
         )
         print(f"{tc.BLUE}Executing query: {postgres_query}{tc.RESET}\n")
 
