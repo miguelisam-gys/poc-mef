@@ -1,4 +1,4 @@
-semantic-kernel
+semantic-kernel==1.33.0
 pydantic
 chainlit
 python-dotenv
