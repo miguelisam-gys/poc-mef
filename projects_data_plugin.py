@@ -136,7 +136,7 @@ class ProjectsDataPlugin:
             "ETAPA_FORMATO_08_ACTUAL": "Etapa actual en la cual se encuentra la Inversión: 'APROBACIÓN DE CONSISTENCIA (A)', 'EXPEDIENTE TÉCNICO (B)', 'EJECUCIÓN FÍSICA (C)'",
             "FECHA_INICIO_INVERSION": "Fecha que, según lo registrado en el Formato 08  correspondería al inicio programado de la inversión.",
             "FECHA_FIN_INVERSION":"Fecha que, de acuerdo con lo consignado en el Formato 08 se consideraría como la finalización programada de la inversión.",
-            "COSTO_INVERSION_ACTUALIZADO": "Costo total actualizado de la inversión. Representa la suma del costo de ejecución y, cuando corresponde por normativa, el costo de control concurrente.",
+            "COSTO_INVERSION_ACTUALIZADO": "Costo Total de la Inversión Actualizado y podría incluir Costo de Control Concurrente",
             "COSTO_CONTROVERSIAS": "Costo de controversias asociadas a la Inversión",
             "MONTO_CARTA_FIANZA": "Monto de la Carta Fianza asociada a la Inversión",
             "COSTO_TOTAL_INV_ACTUALIZADO": "Costo Total de la Inversión Actualizado",
